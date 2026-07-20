@@ -189,6 +189,15 @@ app.post('/api/datajud/:tribunal', async (req, res) => {
  *   - numeroComunicacao, orgaoId
  */
 app.get('/api/djen/comunicacao', async (req, res) => {
+  // Valida se há pelo menos um filtro obrigatório
+  const temFiltro = req.query.numeroOab || req.query.nomeAdvogado || req.query.nomeParte || req.query.numeroProcesso || req.query.siglaTribunal;
+  
+  if (!temFiltro) {
+    return res.status(422).json({
+      erro: true,
+      mensagem: 'Parâmetros inválidos. A busca precisa incluir pelo menos um filtro (tribunal, nome, OAB ou processo).'
+    });
+  }
   const queryString = new URLSearchParams(req.query).toString();
   const urlDestino = `https://comunicaapi.pje.jus.br/api/v1/comunicacao${queryString ? '?' + queryString : ''}`;
 
