@@ -198,6 +198,7 @@ app.get('/api/djen/comunicacao', async (req, res) => {
       mensagem: 'Parâmetros inválidos. A busca precisa incluir pelo menos um filtro (tribunal, nome, OAB ou processo).'
     });
   }
+
   const queryString = new URLSearchParams(req.query).toString();
   const urlDestino = `https://comunicaapi.pje.jus.br/api/v1/comunicacao${queryString ? '?' + queryString : ''}`;
 

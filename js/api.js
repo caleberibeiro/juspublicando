@@ -724,7 +724,10 @@ function getTodosAliases() {
 // INTEGRAÇÃO DJEN — Diário de Justiça Eletrônico Nacional
 // ============================================================
 
-const DJEN_BASE = '/api/djen';
+// Chamada direta à API pública do DJEN (CORS liberado pelo CNJ: Access-Control-Allow-Origin: *).
+// Evita depender do proxy do servidor Render, cujo IP de datacenter é bloqueado/limitado
+// pelo WAF do CloudFront que protege a API, causando respostas não-JSON (HTML de erro).
+const DJEN_BASE = 'https://comunicaapi.pje.jus.br/api/v1';
 
 /**
  * Consulta publicações no DJEN
@@ -754,17 +757,20 @@ async function consultarDJEN(params) {
     const queryString = new URLSearchParams(queryParams).toString();
     const url = `${DJEN_BASE}/comunicacao${queryString ? '?' + queryString : ''}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
     if (!response.ok) {
         if (response.status === 429) {
             throw new Error('Rate limit atingido. Aguarde 1 minuto antes de fazer novas consultas.');
         }
-        if (response.status === 422) {
-            throw new Error('Parâmetros inválidos. A busca precisa incluir pelo menos um filtro (tribunal, nome, OAB ou processo).');
+        let mensagem = `Erro ${response.status} ao consultar o DJEN.`;
+        try {
+            const body = await response.json();
+            mensagem = body.message || body.mensagem || mensagem;
+        } catch (_) {
+            // Resposta não veio em JSON (ex.: página de erro) — mantém mensagem padrão
         }
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || body.mensagem || `Erro ${response.status} ao consultar o DJEN.`);
+        throw new Error(mensagem);
     }
 
     return await response.json();
@@ -862,7 +868,7 @@ async function buscarPublicacoesPorTribunalDJEN(siglaTribunal, dataInicio, dataF
  * @returns {Promise<Array>} Array de tribunais
  */
 async function listarTribunaisDJEN() {
-    const response = await fetch(`${DJEN_BASE}/tribunais`);
+    const response = await fetch(`${DJEN_BASE}/comunicacao/tribunal`, { headers: { 'Accept': 'application/json' } });
     if (!response.ok) {
         throw new Error('Erro ao listar tribunais do DJEN.');
     }
